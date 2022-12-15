@@ -235,9 +235,12 @@ export default class Render {
       destX =
         segment.p1.screen.x + (scale * sprite.offset * roadWidth * width) / 2,
       destY = segment.p1.screen.y,
+      atlasImg = this.scene.atlasTexture.get(sprite.frame),
+      spriteW = atlasImg.width,
+      spriteH = atlasImg.height,
       // TODO: should not be hardcoded, should use sprite w/h
-      destW = ((135 * scale * width) / 2) * (allScale * roadWidth),
-      destH = ((333 * scale * width) / 2) * (allScale * roadWidth),
+      destW = ((spriteW * scale * width) / 2) * (allScale * roadWidth),
+      destH = ((spriteH * scale * width) / 2) * (allScale * roadWidth),
       offsetX = sprite.offset < 0 ? -1 : 0,
       offsetY = -1,
       clipY = segment.clip;
@@ -248,8 +251,12 @@ export default class Render {
     let clipH = clipY ? Math.max(0, destY + destH - clipY) : 0;
 
     if (clipH < destH) {
-      // TODO: 'tree' should not be hardcoded here
-      let thisSprite = this.scene.add.image(destX, destY, 'tree');
+      let thisSprite = this.scene.add.image(
+        destX,
+        destY,
+        sprite.source,
+        sprite.frame
+      );
       // TODO:
       // This doesn't work because we're readding the sprite each time, not moving it... could be improved.
       // thisSprite.setAlpha(0)
@@ -257,7 +264,7 @@ export default class Render {
       thisSprite.displayWidth = destW;
       thisSprite.displayHeight = destH;
       // TODO: The w/h here should not be hardcoded
-      thisSprite.setCrop(0, 0, 135, 333 - (333 * clipH) / destH);
+      thisSprite.setCrop(0, 0, spriteW, spriteH - (spriteH * clipH) / destH);
       this.scene.allSprites.push(thisSprite);
     }
   }

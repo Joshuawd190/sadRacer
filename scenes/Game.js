@@ -5,8 +5,6 @@ export default class Game extends Phaser.Scene {
   constructor() {
     super('game');
 
-    this.fps = 60; // how many 'update' frames per second
-    this.step = 1 / this.fps; // how long is each frame (in seconds)
     this.segments = []; // array of road segments
     this.background = null; // our background image
     this.sprites = null; // our spritesheet
@@ -25,10 +23,10 @@ export default class Game extends Phaser.Scene {
     this.playerX = 0; // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     this.playerY = 0;
     this.playerZ = this.cameraHeight * this.cameraDepth + 200; // player relative z distance from camera (computed)
-    this.fogDensity = 2; // exponential fog density
+    this.fogDensity = 1; // exponential fog density
     this.position = 0; // current camera Z position (add playerZ to get player's absolute Z position)
     this.speed = 0; // current speed
-    this.maxSpeed = this.segmentLength / this.step; // top speed (ensure we can't move more than 1 segment in a single frame to make collision detection easier)
+    this.maxSpeed = this.segmentLength * 60; // top speed (ensure we can't move more than 1 segment in a single frame to make collision detection easier)
     this.accel = this.maxSpeed / 5; // acceleration rate - tuned until it 'felt' right
     this.breaking = -this.maxSpeed; // deceleration rate when braking
     this.decel = -this.maxSpeed / 5; // 'natural' deceleration rate when neither accelerating, nor braking
@@ -107,6 +105,9 @@ export default class Game extends Phaser.Scene {
     };
 
     this.puffs = null;
+
+    this.atlasTexture = null;
+    this.frameNames = null;
   }
 
   init() {
@@ -117,7 +118,10 @@ export default class Game extends Phaser.Scene {
 
   create() {
     // Parallax background stuff
-    this.debugHUD = this.scene.get('debug-hud');
+
+    this.atlasTexture = this.textures.get('atlas');
+    this.frameNames = this.atlasTexture.getFrameNames();
+    console.log(this.frameNames);
 
     this.bg_sky = this.add.image(this.cX, this.cY, 'sky');
     this.bg_clouds = this.add
@@ -143,9 +147,6 @@ export default class Game extends Phaser.Scene {
     });
     this.puffs.setDepth(2003);
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('Q,W,A,S,D');
-
     if (this.debugOn) {
       this.debugShade = this.add
         .text(201, 201, 'DEBUG', { color: '#000000', fontSize: '20px' })
@@ -154,9 +155,6 @@ export default class Game extends Phaser.Scene {
         .text(200, 200, 'DEBUG', { color: '#ff0000', fontSize: '20px' })
         .setDepth(2000);
     }
-
-    // console.log(this.playerZ)
-    // console.log(this.cameraDepth)
 
     // graphics object used to render the road
     this.gfx = this.add.graphics();
@@ -168,7 +166,6 @@ export default class Game extends Phaser.Scene {
     //Track object?  Option to generate infinte track randomly? Theming? Track transitions?
 
     this.resetRoad();
-    // this.resetSprites()
 
     // delay drive start
     if (this.autoDrive) {
@@ -182,10 +179,13 @@ export default class Game extends Phaser.Scene {
       });
     }
 
-    // this.cameras.main.setZoom(1.5)
-    // this.cameraAngle = Phaser.Math.Clamp(this.cameraAngle, -6, 6)
+    // Zoom in camera to hide my bad programming
+    this.cameras.main.setZoom(1.2);
 
     // this.scene.run('debug-hud')
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D');
 
     this.keys.Q.on('up', () => {
       if (this.scene.isActive('debug-hud')) {
@@ -193,6 +193,10 @@ export default class Game extends Phaser.Scene {
       } else {
         this.scene.run('debug-hud');
       }
+    });
+
+    this.keys.E.on('up', () => {
+      this.resetRoad();
     });
   }
 
@@ -221,35 +225,17 @@ export default class Game extends Phaser.Scene {
       this.keySlower = this.cursors.down.isDown;
     }
 
-    // get current time
-    let now = Util.timestamp();
-
-    // delta time
-    let dt = Math.min(1, (now - this.last) / 1000);
-
-    // new dt
-    let ndt = delta / 1000;
-
-    // "graphics" delta time?
-    this.gdt += dt;
-
-    while (this.gdt > this.step) {
-      this.gdt -= this.step;
-    }
-
     // game loop
     /* Maybe use game object factory add graphics instead of the graphics object.  
     Easier to add more varied shapes instead of drawing them manually. */
     this.gfx.clear();
-    this.clearSprites(); // delete and load all images again lol
+    this.clearSprites();
     this.Render.all();
-    this.playerUpdate(ndt);
+    this.playerUpdate(delta / 1000);
 
     if (this.debugOn) {
       this.drawDebug(time, delta, ndt);
     }
-    // }
-    this.last = Util.timestamp();
   }
 
   drawDebug(time, delta, dt) {
@@ -416,37 +402,118 @@ export default class Game extends Phaser.Scene {
   }
 
   addSprite(n, sprite, offset) {
-    if (typeof this.segments[n].sprites !== 'undefined') {
-      this.segments[n].sprites.push({ source: sprite, offset: offset });
-    }
+    let randomFrame =
+      this.frameNames[Util.randomInt(0, this.frameNames.length - 1)];
+    this.segments[n].sprites.push({
+      source: sprite,
+      frame: randomFrame,
+      offset: offset,
+    });
   }
 
   resetSprites() {
-    let n;
-    for (n = 0; n < this.segments.length - 5; n += 5) {
-      if (n < this.segments.length - 5) {
-        this.addSprite(
-          n + Util.randomInt(0, 5),
-          'tree',
-          2.1 + Math.random() * 25
-        );
-        this.addSprite(
-          n + Util.randomInt(0, 5),
-          'tree',
-          -2.1 - Math.random() * 25
-        );
-        this.addSprite(
-          n + Util.randomInt(0, 5),
-          'tree',
-          1.1 + Math.random() * 5
-        );
-        this.addSprite(
-          n + Util.randomInt(0, 5),
-          'tree',
-          -1.1 - Math.random() * 5
-        );
+    for (let n = 0; n < this.segments.length - 5; n += 5) {
+      this.addSprite(
+        n + Util.randomInt(0, 5),
+        'atlas',
+        2.1 + Math.random() * 25
+      );
+      this.addSprite(
+        n + Util.randomInt(0, 5),
+        'atlas',
+        -2.1 - Math.random() * 25
+      );
+      this.addSprite(
+        n + Util.randomInt(0, 5),
+        'atlas',
+        1.1 + Math.random() * 5
+      );
+      this.addSprite(
+        n + Util.randomInt(0, 5),
+        'atlas',
+        -1.1 - Math.random() * 5
+      );
+    }
+  }
+
+  playerUpdate(dt) {
+    let playerSegment = this.findSegment(this.position + this.playerZ);
+    let speedPercent = this.speed / this.maxSpeed;
+    let dx = dt * 2 * speedPercent; // at top speed, should be able to cross from left to right (-1 to +1) in 1 second
+
+    this.position = Util.increase(
+      this.position,
+      dt * this.speed,
+      this.trackLength
+    );
+
+    let centerGap = 0.05;
+    if (this.autoDrive) {
+      // Steer back to center
+      if (this.playerX < -0.001) {
+        //-centerGap - 0.01)
+        this.playerX += dx / 2;
+        // this.keyRight = true
+      } else if (this.playerX > 0.001) {
+        //centerGap + 0.01)
+        this.playerX -= dx / 2;
+        // this.keyLeft = true
+      } //if (this.playerX <= centerGap && this.playerX >= -centerGap)
+      else {
+        this.playerX = 0;
+        // this.keyLeft = false
+        // this.keyRight = false
       }
     }
+
+    if (this.keyLeft) {
+      this.playerX = this.playerX - dx;
+    } else if (this.keyRight) {
+      this.playerX = this.playerX + dx;
+    }
+
+    let factor = dx * playerSegment.curve;
+    // console.log(`dx: ${dx}, playerSegment.curve: ${playerSegment.curve}, factor: ${factor}`)
+    // console.log(factor * 100)
+
+    // this.cameras.main.setAngle(Phaser.Math.Clamp(factor * 100, -6, 6))
+    this.cameras.main.setAngle(Phaser.Math.Clamp(playerSegment.curve, -8, 8));
+
+    this.bg_clouds.tilePositionX += this.cloudSpeed * 100;
+    this.bg_clouds.tilePositionX +=
+      dx * 10000 * speedPercent * playerSegment.curve * this.cloudSpeed;
+    this.bg_hills.tilePositionX +=
+      dx * 10000 * speedPercent * playerSegment.curve * this.hillSpeed;
+    this.bg_trees.tilePositionX +=
+      dx * 10000 * speedPercent * playerSegment.curve * this.treeSpeed;
+
+    this.bg_clouds.tilePositionY = this.playerY * this.cloudSpeed * -2;
+    this.bg_hills.tilePositionY = this.playerY * this.hillSpeed * -2;
+    this.bg_trees.tilePositionY = this.playerY * this.treeSpeed * -2;
+
+    this.playerX =
+      this.playerX - dx * speedPercent * playerSegment.curve * this.centrifugal;
+
+    if (this.keyFaster)
+      this.speed = Util.accelerate(this.speed, this.accel, dt);
+    else if (this.keySlower)
+      this.speed = Util.accelerate(this.speed, this.breaking, dt);
+    else this.speed = Util.accelerate(this.speed, this.decel, dt);
+
+    if (
+      (this.playerX < -1 || this.playerX > 1) &&
+      this.speed > this.offRoadLimit
+    )
+      this.speed = Util.accelerate(this.speed, this.offRoadDecel, dt);
+
+    this.playerX = Util.limit(this.playerX, -2, 2); // dont ever let player go too far out of bounds
+    this.speed = Util.limit(this.speed, 0, this.maxSpeed); // or exceed maxSpeed
+  }
+
+  findSegment(z) {
+    return this.segments[
+      Math.floor(z / this.segmentLength) % this.segments.length
+    ];
   }
 
   addHill(num, height) {
@@ -553,85 +620,5 @@ export default class Game extends Phaser.Scene {
       this.road.LENGTH.MEDIUM,
       -this.road.CURVE.MEDIUM
     );
-  }
-
-  playerUpdate(dt) {
-    let playerSegment = this.findSegment(this.position + this.playerZ);
-    let speedPercent = this.speed / this.maxSpeed;
-    let dx = dt * 2 * speedPercent; // at top speed, should be able to cross from left to right (-1 to +1) in 1 second
-
-    this.position = Util.increase(
-      this.position,
-      dt * this.speed,
-      this.trackLength
-    );
-
-    let centerGap = 0.05;
-    if (this.autoDrive) {
-      // Steer back to center
-      if (this.playerX < -0.001) {
-        //-centerGap - 0.01)
-        this.playerX += dx / 2;
-        // this.keyRight = true
-      } else if (this.playerX > 0.001) {
-        //centerGap + 0.01)
-        this.playerX -= dx / 2;
-        // this.keyLeft = true
-      } //if (this.playerX <= centerGap && this.playerX >= -centerGap)
-      else {
-        this.playerX = 0;
-        // this.keyLeft = false
-        // this.keyRight = false
-      }
-    }
-
-    if (this.keyLeft) {
-      this.playerX = this.playerX - dx;
-    } else if (this.keyRight) {
-      this.playerX = this.playerX + dx;
-    }
-
-    let factor = dx * playerSegment.curve;
-    // console.log(`dx: ${dx}, playerSegment.curve: ${playerSegment.curve}, factor: ${factor}`)
-    // console.log(factor * 100)
-
-    // this.cameras.main.setAngle(Phaser.Math.Clamp(factor * 100, -6, 6))
-    this.cameras.main.setAngle(Phaser.Math.Clamp(playerSegment.curve, -8, 8));
-
-    this.bg_clouds.tilePositionX += this.cloudSpeed * 100;
-    this.bg_clouds.tilePositionX +=
-      dx * 10000 * speedPercent * playerSegment.curve * this.cloudSpeed;
-    this.bg_hills.tilePositionX +=
-      dx * 10000 * speedPercent * playerSegment.curve * this.hillSpeed;
-    this.bg_trees.tilePositionX +=
-      dx * 10000 * speedPercent * playerSegment.curve * this.treeSpeed;
-
-    this.bg_clouds.tilePositionY = this.playerY * this.cloudSpeed * -2;
-    this.bg_hills.tilePositionY = this.playerY * this.hillSpeed * -2;
-    this.bg_trees.tilePositionY = this.playerY * this.treeSpeed * -2;
-
-    this.playerX =
-      this.playerX - dx * speedPercent * playerSegment.curve * this.centrifugal;
-
-    if (this.keyFaster)
-      this.speed = Util.accelerate(this.speed, this.accel, dt);
-    else if (this.keySlower)
-      this.speed = Util.accelerate(this.speed, this.breaking, dt);
-    else this.speed = Util.accelerate(this.speed, this.decel, dt);
-
-    if (
-      (this.playerX < -1 || this.playerX > 1) &&
-      this.speed > this.offRoadLimit
-    )
-      this.speed = Util.accelerate(this.speed, this.offRoadDecel, dt);
-
-    this.playerX = Util.limit(this.playerX, -2, 2); // dont ever let player go too far out of bounds
-    this.speed = Util.limit(this.speed, 0, this.maxSpeed); // or exceed maxSpeed
-  }
-
-  findSegment(z) {
-    return this.segments[
-      Math.floor(z / this.segmentLength) % this.segments.length
-    ];
   }
 }
