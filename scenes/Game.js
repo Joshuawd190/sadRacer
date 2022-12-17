@@ -4,7 +4,8 @@ import Render from '../modules/Render.js'
 const INFO_FORMAT = 
 `Size:       %1
 Spawned:    %2
-Despawned:  %3`
+Despawned:  %3
+Camera Pan:   %4 , %5`
 
 export default class Game extends Phaser.Scene
 {
@@ -35,12 +36,16 @@ export default class Game extends Phaser.Scene
     this.speed         = 0    // current speed
     this.maxSpeed      = 12000
     this.accel         =  this.maxSpeed/5  // acceleration rate - tuned until it 'felt' right
-    this.braking      = -this.maxSpeed    // deceleration rate when braking
+    this.braking       = -this.maxSpeed    // deceleration rate when braking
     this.decel         = -this.maxSpeed/5  // 'natural' deceleration rate when neither accelerating, nor braking
     this.offRoadDecel  = -this.maxSpeed/2  // off road deceleration is somewhere in between
     this.offRoadLimit  =  this.maxSpeed/4  // limit when off road deceleration no longer applies (e.g. you can always go at least this speed even when off road)
-    this.inertia    = 0//0.15 // centrifugal force multiplier when going around curves
-    
+    this.inertia       = 0//0.15 // centrifugal force multiplier when going around curves
+    this.rotationFactor = 0
+    this.translateX = 0
+    this.translateY = 0
+
+
     this.debugMaxY    = 0
 
     this.cameraZoom = 1.2
@@ -123,7 +128,7 @@ export default class Game extends Phaser.Scene
 
     this.atlasTexture   = this.textures.get('atlas')
     this.frameNames     = this.atlasTexture.getFrameNames()
-    console.log(this.frameNames)
+    // console.log(this.frameNames)
 
     this.debugHUD = this.scene.get('debug-hud')
 
@@ -166,7 +171,7 @@ export default class Game extends Phaser.Scene
     // this.scene.run('debug-hud')
 
     this.cursors = this.input.keyboard.createCursorKeys()
-    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D')
+    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D,J,K,L,I,Z')
 
     this.keys.Q.on('up', () => {
       if (this.scene.isActive('debug-hud'))
@@ -178,7 +183,35 @@ export default class Game extends Phaser.Scene
         this.scene.run('debug-hud')
       }
     })
+    
+    this.keys.Z.on('up', ()=>{
+      this.infoText.alpha == 1 ?
+      this.infoText.setAlpha(0):
+      this.infoText.setAlpha(1)
+    })
 
+    this.keys.J.emitOnRepeat = true
+    this.keys.K.emitOnRepeat = true
+    this.keys.L.emitOnRepeat = true
+    this.keys.I.emitOnRepeat = true
+
+    this.keys.I.on('down', ()=>{
+      // this.rotationFactor = 0
+      this.translateY += 10
+    })
+    this.keys.L.on('down', ()=>{
+      this.translateX += 10
+    })
+    this.keys.J.on('down', ()=>{
+      // this.rotationFactor -= 10
+      // this.rotationFactor = Util.normalizeRotation(this.rotationFactor)
+      this.translateX -= 10
+    })
+    this.keys.K.on('down', ()=>{
+      // this.rotationFactor += 10
+      // this.rotationFactor = Util.normalizeRotation(this.rotationFactor)
+      this.translateY -= 10
+    })
     this.poolGroup = this.add.group({
 			key: 'atlas',
       frame: this.frameNames,
@@ -192,10 +225,11 @@ export default class Game extends Phaser.Scene
 		this.infoText = this.add.text(300, 200, 'hello?')
       .setDepth(3000)
       .setOrigin(0, 0)
-
-    this.input.on(Phaser.Input.Events.POINTER_DOWN, pointer => {
-      this.spawnFromAtlas(pointer.x, pointer.y)
-    })
+      .setScale(3,3)
+      .setBackgroundColor("black")
+    // this.input.on(Phaser.Input.Events.POINTER_DOWN, pointer => {
+    //   this.spawnFromAtlas(pointer.x, pointer.y)
+    // })
 
     this.resetRoad()
     
@@ -232,12 +266,17 @@ export default class Game extends Phaser.Scene
 
 		const size = this.poolGroup.getLength()
 		const used = this.poolGroup.getTotalUsed()
+    let rotation = this.rotationFactor
+    let X = this.translateX
+    let Y = this.translateY
 		const text = Phaser.Utils.String.Format(
 			INFO_FORMAT,
 			[
 				size,
 				used,
-				size - used
+				size - used,
+        X,
+        Y
 			]
 		)
 
@@ -351,15 +390,15 @@ export default class Game extends Phaser.Scene
     // this.addLowRollingHills()
     // this.addStraight(250)
 
-    this.addHill(200, this.road.HILL.HIGH)
-    this.addSCurves()
-    this.addStraight()
-    this.addHillCurveRight(this.road.LENGTH.LONG, this.road.HILL.HIGH)
-    this.addLeftDownhillToEnd()
-    this.addHillCurveLeft(this.road.LENGTH.LONG, this.road.HILL.HIGH)
-    this.addDownhillToEnd()
-    this.addCurve(this.road.LENGTH.SHORT, -this.road.CURVE.HARD, 0)
-    this.addCurve(this.road.LENGTH.SHORT, this.road.CURVE.HARD, 0)
+    // this.addHill(200, this.road.HILL.HIGH)
+    // this.addSCurves()
+    // this.addStraight()
+    // this.addHillCurveRight(this.road.LENGTH.LONG, this.road.HILL.HIGH)
+    // this.addLeftDownhillToEnd()
+    // this.addHillCurveLeft(this.road.LENGTH.LONG, this.road.HILL.HIGH)
+    // this.addDownhillToEnd()
+    // this.addCurve(this.road.LENGTH.SHORT, -this.road.CURVE.HARD, 0)
+    // this.addCurve(this.road.LENGTH.SHORT, this.road.CURVE.HARD, 0)
     this.addStraight()
 
     // this.addRoad(10, 10, 10, 0)
@@ -378,6 +417,19 @@ export default class Game extends Phaser.Scene
     this.resetSprites()
   }
 
+
+  /*addRoadFromSpline(curveSpline, ySpline, size){
+    //where curveSpline defines the faux 'x' position of the road and ySpline the inclination or hill of the road
+    //Length would be determined by segmentLength
+    //Size is the step amount
+    //not sure if needs smoothing given that spline are already smooth?
+    // addSegment(curve:f(z), y: g(z))
+    //where f(z) is a point on the curve spline, and g(z) is a point on the y Spline
+    //
+
+
+  }
+  */
   addRoad (enter, hold, leave, curve, y)
   {
     let startY  = this.lastY()
@@ -406,6 +458,8 @@ export default class Game extends Phaser.Scene
     let n = this.segments.length
     this.segments.push({
        index: n,
+       // Add cameraRotation: {}?
+       // Then change project function to add rotation math
           p1: { world: { y: this.lastY(), z:  n   *this.segmentLength }, camera: {}, screen: {} },
           p2: { world: { y: y,  z: (n+1)*this.segmentLength }, camera: {}, screen: {} },
        curve: curve,

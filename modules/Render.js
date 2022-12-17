@@ -28,8 +28,10 @@ export default class Render
         x                     = 0,
         maxy                  = height,
         n, segment
-        
+    let rotation = this.scene.rotationFactor
     this.scene.playerY    = Util.interpolate(playerSegment.p1.world.y, playerSegment.p2.world.y, playerPercent)
+
+    // console.log(this.scene.rotationFactor + rotation);
     
     // Segment render loop (away from camera)
     for(n = 0 ; n < this.scene.drawDistance ; n++) {
@@ -42,6 +44,10 @@ export default class Render
   
       Util.project(segment.p1, (playerX * roadWidth) - x, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
       Util.project(segment.p2, (playerX * roadWidth) - x - dx, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
+      // Util.rotateProjection(segment.p1, rotation || 0, width, height)
+      // Util.rotateProjection(segment.p2, rotation || 0, width, height)
+      Util.translate(segment.p1, this.scene.translateX, this.scene.translateY)
+      Util.translate(segment.p2, this.scene.translateX, this.scene.translateY)
 
       x = x + dx
       dx = dx + segment.curve
@@ -224,8 +230,8 @@ export default class Render
         y2            = segment.p2.camera.y,
         curve         = segment.curve,
         scale         = cameraDepth / playerZ,
-        destX         = width / 2,
-        destY         = (height / 2) - (cameraDepth / playerZ * Util.interpolate(y1, y2, playerPercent) * height / 2),
+        destX         = (width / 2) + this.scene.translateX,
+        destY         = (height / 2) - (cameraDepth / playerZ * Util.interpolate(y1, y2, playerPercent) * height / 2) + this.scene.translateY,
         steer         = this.scene.speed * (this.scene.keyLeft ? -1 : this.scene.keyRight ? 1 : 0),
         updown        = y2 - y1,
         // bounce        = (1.5 * Math.random() * speedPercent * resolution) * Util.randomChoice([-1,1])
