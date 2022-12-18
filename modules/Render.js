@@ -31,8 +31,10 @@ export default class Render
     let rotation = this.scene.rotationFactor
     this.scene.playerY    = Util.interpolate(playerSegment.p1.world.y, playerSegment.p2.world.y, playerPercent)
 
-    // console.log(this.scene.rotationFactor + rotation);
+    // console.log();
+
     
+
     // Segment render loop (away from camera)
     for(n = 0 ; n < this.scene.drawDistance ; n++) {
   
@@ -44,10 +46,18 @@ export default class Render
   
       Util.project(segment.p1, (playerX * roadWidth) - x, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
       Util.project(segment.p2, (playerX * roadWidth) - x - dx, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
-      // Util.rotateProjection(segment.p1, rotation || 0, width, height)
-      // Util.rotateProjection(segment.p2, rotation || 0, width, height)
-      Util.translate(segment.p1, this.scene.translateX, this.scene.translateY)
-      Util.translate(segment.p2, this.scene.translateX, this.scene.translateY)
+
+      // Util.rotateProjection(segment.p1, rotation || 0)
+      // Util.rotateProjection(segment.p2, rotation || 0)
+      // Util.rotateX(segment.p1, rotation || 0)
+      // Util.rotateX(segment.p2, rotation || 0)
+      // Util.rotateY(segment.p1, rotation || 0)
+      // Util.rotateY(segment.p2, rotation || 0)
+      // Util.translate(segment.p1, this.scene.translateX, this.scene.translateY)
+      // Util.translate(segment.p2, this.scene.translateX, this.scene.translateY)
+      
+
+      
 
       x = x + dx
       dx = dx + segment.curve
@@ -64,6 +74,9 @@ export default class Render
       maxy                  = segment.p1.screen.y
       this.scene.debugMaxY  = maxy
     }
+    
+
+
 
     // Other render items loop (towards camera)
     for(n = (this.scene.drawDistance-1) ; n > 0 ; n--) {
@@ -77,10 +90,12 @@ export default class Render
 
       // Render player car
       if (segment.index == playerSegment.index) {
-        this.player(playerSegment)
+        // this.player(playerSegment)
       }
     
     }
+    this.scene.gfx.fillStyle(0xFFFF00, 1)
+    this.scene.gfx.fillCircle(width/2, height/2, 10)
   }
 
   /**
@@ -102,7 +117,7 @@ export default class Render
         l1 = this.laneMarkerWidth(w1, this.scene.lanes),
         l2 = this.laneMarkerWidth(w2, this.scene.lanes),
         lanew1, lanew2, lanex1, lanex2, lane
-
+    
     this.scene.gfx.fillStyle(color.grass, 1)
     this.scene.gfx.fillRect(0, y2, sw, y1 - y2)
     
@@ -123,6 +138,7 @@ export default class Render
     }
 
     this.fog(0, y1, sw, y2 - y1, fog)
+    
   }
 
   polygon (x1, y1, x2, y2, x3, y3, x4, y4, color)

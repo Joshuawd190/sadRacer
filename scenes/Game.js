@@ -1,12 +1,6 @@
 import Util from '../modules/Util.js'
 import Render from '../modules/Render.js'
 
-const INFO_FORMAT = 
-`Size:       %1
-Spawned:    %2
-Despawned:  %3
-Camera Pan:   %4 , %5`
-
 export default class Game extends Phaser.Scene
 {
   constructor ()
@@ -44,6 +38,7 @@ export default class Game extends Phaser.Scene
     this.rotationFactor = 0
     this.translateX = 0
     this.translateY = 0
+    this.debugPage = 0
 
 
     this.debugMaxY    = 0
@@ -171,7 +166,7 @@ export default class Game extends Phaser.Scene
     // this.scene.run('debug-hud')
 
     this.cursors = this.input.keyboard.createCursorKeys()
-    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D,J,K,L,I,Z')
+    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D,J,K,L,I,Z,X')
 
     this.keys.Q.on('up', () => {
       if (this.scene.isActive('debug-hud'))
@@ -184,11 +179,7 @@ export default class Game extends Phaser.Scene
       }
     })
     
-    this.keys.Z.on('up', ()=>{
-      this.infoText.alpha == 1 ?
-      this.infoText.setAlpha(0):
-      this.infoText.setAlpha(1)
-    })
+    
 
     this.keys.J.emitOnRepeat = true
     this.keys.K.emitOnRepeat = true
@@ -212,6 +203,15 @@ export default class Game extends Phaser.Scene
       // this.rotationFactor = Util.normalizeRotation(this.rotationFactor)
       this.translateY -= 10
     })
+
+    this.keys.Z.on('up', ()=>{
+      this.infoText.alpha == 1 ?
+      this.infoText.setAlpha(0):
+      this.infoText.setAlpha(1)
+    })
+    this.keys.X.on('up',()=>{
+      this.debugPage = (this.debugPage + 1) % 3
+    })
     this.poolGroup = this.add.group({
 			key: 'atlas',
       frame: this.frameNames,
@@ -222,7 +222,7 @@ export default class Game extends Phaser.Scene
       visible: false
 		})
 
-		this.infoText = this.add.text(300, 200, 'hello?')
+		this.infoText = this.add.text(300, 200, 'Fix Me')
       .setDepth(3000)
       .setOrigin(0, 0)
       .setScale(3,3)
@@ -263,23 +263,52 @@ export default class Game extends Phaser.Scene
 		{
 			return
 		}
-
+    let currentSegment = this.findSegment(this.position+this.playerZ)
 		const size = this.poolGroup.getLength()
 		const used = this.poolGroup.getTotalUsed()
     let rotation = this.rotationFactor
     let X = this.translateX
     let Y = this.translateY
-		const text = Phaser.Utils.String.Format(
-			INFO_FORMAT,
-			[
-				size,
-				used,
-				size - used,
-        X,
-        Y
-			]
-		)
+    let text
+    let World = `${Math.round(currentSegment.curve)}, ${Math.round(currentSegment.p1.world.y)}, ${currentSegment.p1.world.z/100}`
+    // console.log(currentSegment);
+    
+    const INFO_PAGE1 =`Size:     %1 \nSpawned:   %2 \nDespawned: %3`
+    const INFO_PAGE2 =`Rotation:       %1 \nTranslation: %2, %3`
+    const INFO_PAGE3 =`World: %1 \nCamera:   %2 \nScreen: %3`
 
+
+    switch(this.debugPage){
+      case this.debugPage = 0:
+        text = Phaser.Utils.String.Format(
+          INFO_PAGE1,
+          [
+            size,
+            used,
+            size - used,
+          ]
+        )
+        break
+      case this.debugPage = 1:
+        text = Phaser.Utils.String.Format(
+          INFO_PAGE2,
+          [
+            rotation,
+            X,
+            Y
+          ]
+        )
+          break
+      case this.debugPage = 2:
+        text = Phaser.Utils.String.Format(
+          INFO_PAGE3,
+          [
+            World
+          ]
+        )
+          break
+    }
+    
 		this.infoText.setText(text)
 
   }
@@ -390,21 +419,22 @@ export default class Game extends Phaser.Scene
     // this.addLowRollingHills()
     // this.addStraight(250)
 
-    // this.addHill(200, this.road.HILL.HIGH)
-    // this.addSCurves()
-    // this.addStraight()
-    // this.addHillCurveRight(this.road.LENGTH.LONG, this.road.HILL.HIGH)
-    // this.addLeftDownhillToEnd()
-    // this.addHillCurveLeft(this.road.LENGTH.LONG, this.road.HILL.HIGH)
-    // this.addDownhillToEnd()
-    // this.addCurve(this.road.LENGTH.SHORT, -this.road.CURVE.HARD, 0)
-    // this.addCurve(this.road.LENGTH.SHORT, this.road.CURVE.HARD, 0)
+    this.addHill(200, this.road.HILL.HIGH)
+    this.addSCurves()
+    this.addStraight()
+    this.addHillCurveRight(this.road.LENGTH.LONG, this.road.HILL.HIGH)
+    this.addLeftDownhillToEnd()
+    this.addHillCurveLeft(this.road.LENGTH.LONG, this.road.HILL.HIGH)
+    this.addDownhillToEnd()
+    this.addCurve(this.road.LENGTH.SHORT, -this.road.CURVE.HARD, 0)
+    this.addCurve(this.road.LENGTH.SHORT, this.road.CURVE.HARD, 0)
     this.addStraight()
 
     // this.addRoad(10, 10, 10, 0)
 
     this.segments[this.findSegment(this.playerZ).index + 2].color = this.colors.START
     this.segments[this.findSegment(this.playerZ).index + 3].color = this.colors.START
+
     for(var n = 0 ; n < this.rumbleLength ; n++)
     {
       this.segments[this.segments.length-1-n].color = this.colors.FINISH
