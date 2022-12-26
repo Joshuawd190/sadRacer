@@ -12,20 +12,25 @@ export default class Render
    */
   all ()
   {
-    let baseSegment           = this.scene.findSegment(this.scene.position),
+    let baseSegment           = this.scene.findSegment(this.scene.cameraZ),
         basePercent           = Util.percentRemaining(this.scene.position, this.scene.segmentLength),
         playerSegment         = this.scene.findSegment(this.scene.position + this.scene.playerZ),
         playerPercent         = Util.percentRemaining(this.scene.position + this.scene.playerZ, this.scene.segmentLength),
         width                 = this.scene.width,
         height                = this.scene.height,
-        cameraHeight          = this.scene.cameraHeight,
+        cameraX               = this.scene.cameraX,
+        cameraHeight          = this.scene.cameraY,
+        cameraZ              = this.scene.cameraZ,
         cameraDepth           = this.scene.cameraDepth,
+        camRotX = 0,
+        camRotY = 0,
+        camRotZ = 0,
         roadWidth             = this.scene.roadWidth,
         trackLength           = this.scene.trackLength,
-        position              = this.scene.position,
         playerX               = this.scene.playerX,
         dx                    = - (baseSegment.curve * basePercent),
         x                     = 0,
+        position = 0,
         maxy                  = height,
         n, segment
     let rotation = this.scene.rotationFactor
@@ -44,15 +49,12 @@ export default class Render
       segment.fog     = Util.exponentialFog(n/this.scene.drawDistance, this.scene.fogDensity)
       segment.clip    = maxy
   
-      Util.project(segment.p1, (playerX * roadWidth) - x, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
-      Util.project(segment.p2, (playerX * roadWidth) - x - dx, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
-
+      // Util.project(segment.p1, (playerX * roadWidth) - x, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
+      // Util.project(segment.p2, (playerX * roadWidth) - x - dx, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
+      Util.projectv2(segment.p1, (playerX * roadWidth) - cameraX - x, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
+      Util.projectv2(segment.p2, (playerX * roadWidth) - cameraX - x - dx, this.scene.playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth)
       // Util.rotateProjection(segment.p1, rotation || 0)
       // Util.rotateProjection(segment.p2, rotation || 0)
-      // Util.rotateX(segment.p1, rotation || 0)
-      // Util.rotateX(segment.p2, rotation || 0)
-      // Util.rotateY(segment.p1, rotation || 0)
-      // Util.rotateY(segment.p2, rotation || 0)
       // Util.translate(segment.p1, this.scene.translateX, this.scene.translateY)
       // Util.translate(segment.p2, this.scene.translateX, this.scene.translateY)
       

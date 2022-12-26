@@ -18,15 +18,23 @@ export default class Game extends Phaser.Scene
     this.rumbleLength  = 3    // number of segments per red/white rumble strip
     this.trackLength   = null // z length of entire track (computed)
     this.lanes         = 3    // number of lanes
+
+    // Camera stuff
     this.fieldOfView   = 100  // angle (degrees) for field of view
-    this.cameraHeight  = 800 // z height of camera
-    this.cameraDepth   = 1 / Math.tan((this.fieldOfView/2) * Math.PI/180) // z distance camera is from screen (computed)
-    this.drawDistance  = 500  // number of segments to draw
+    this.cameraDepth   =  1 / Math.tan((this.fieldOfView/2) * Math.PI/180) 
+    this.cameraX = 0   // X position
+    this.cameraY = 800 // height of camera
+    this.cameraZ = 0  // Z position
+    this.camRotX = 0
+    this.camRotY = 0
+    this.camRotZ = 0
+
     this.playerX       = 0    // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     this.playerY       = 0
-    this.playerZ       = this.cameraHeight * this.cameraDepth + 200 // player relative z distance from camera (computed)
+    this.playerZ       = this.cameraY * this.cameraDepth + 200 // player relative z distance from camera (computed)
+
+    this.drawDistance  = 500  // number of segments to draw
     this.fogDensity    = 1    // exponential fog density
-    this.position      = 0    // current camera Z position (add playerZ to get player's absolute Z position)
     this.speed         = 0    // current speed
     this.maxSpeed      = 12000
     this.accel         =  this.maxSpeed/5  // acceleration rate - tuned until it 'felt' right
@@ -45,7 +53,7 @@ export default class Game extends Phaser.Scene
 
     this.cameraZoom = 1.2
     
-    this.autoDrive    = true
+    this.autoDrive    = false
 
     this.keyFaster    = false
     this.keySlower    = false
@@ -166,7 +174,8 @@ export default class Game extends Phaser.Scene
     // this.scene.run('debug-hud')
 
     this.cursors = this.input.keyboard.createCursorKeys()
-    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D,J,K,L,I,Z,X')
+    this.keys = this.input.keyboard.addKeys('Q,W,E,A,S,D,J,K,L,I,Z,X,U,O,F,G,H,T,R,Y')
+    
 
     this.keys.Q.on('up', () => {
       if (this.scene.isActive('debug-hud'))
@@ -185,23 +194,31 @@ export default class Game extends Phaser.Scene
     this.keys.K.emitOnRepeat = true
     this.keys.L.emitOnRepeat = true
     this.keys.I.emitOnRepeat = true
+    this.keys.U.emitOnRepeat = true
+    this.keys.O.emitOnRepeat = true
+    this.keys.F.emitOnRepeat = true
+    this.keys.G.emitOnRepeat = true
+    this.keys.H.emitOnRepeat = true
+    this.keys.R.emitOnRepeat = true
+    this.keys.Y.emitOnRepeat = true
 
     this.keys.I.on('down', ()=>{
-      // this.rotationFactor = 0
-      this.translateY += 10
-    })
-    this.keys.L.on('down', ()=>{
-      this.translateX += 10
-    })
-    this.keys.J.on('down', ()=>{
-      // this.rotationFactor -= 10
-      // this.rotationFactor = Util.normalizeRotation(this.rotationFactor)
-      this.translateX -= 10
+      this.camRotY = (this.camRotY + 10) % 360
     })
     this.keys.K.on('down', ()=>{
-      // this.rotationFactor += 10
-      // this.rotationFactor = Util.normalizeRotation(this.rotationFactor)
-      this.translateY -= 10
+      this.camRotY = (this.camRotY - 10) % 360
+    })
+    this.keys.L.on('down', ()=>{
+      this.camRotX = (this.camRotX + 10) % 360    
+    })
+    this.keys.J.on('down', ()=>{
+      this.camRotX = (this.camRotX - 10) % 360      
+    })
+    this.keys.U.on('down', ()=>{
+      this.camRotZ = (this.camRotZ - 10) % 360
+    })
+    this.keys.O.on('down', ()=>{
+      this.camRotZ = (this.camRotZ + 10) % 360
     })
 
     this.keys.Z.on('up', ()=>{
@@ -347,7 +364,7 @@ export default class Game extends Phaser.Scene
   recalcCamera()
   {
     this.cameraDepth = 1 / Math.tan((this.fieldOfView/2) * Math.PI/180)
-    this.playerZ = this.cameraHeight * this.cameraDepth + 200
+    this.playerZ = this.cameraY * this.cameraDepth + 200
   }
 
   recalcSpeeds()
